@@ -34,16 +34,23 @@ class SimpleAutoML:
         scaler = StandardScaler()
         self.X[numerical_features.columns] = scaler.fit_transform(self.X[numerical_features.columns])
 
-    # Encode categorical features
+ # Encode categorical features if they exist
     def encode_data(self):
         categorical_features = self.X.select_dtypes(exclude=[np.number])
-        encoder = LabelEncoder()
-        self.X[categorical_features.columns] = encoder.fit_transform(self.X[categorical_features.columns])
-    
-    # encode target variable
+
+        if not categorical_features.empty:
+            encoder = LabelEncoder()
+            self.X[categorical_features.columns] = encoder.fit_transform(self.X[categorical_features.columns])
+        else:
+            print("No categorical features found in the data.")
+
+    # Encode target variable if it is categorical
     def encode_target(self):
-        encoder = LabelEncoder()
-        self.y = encoder.fit_transform(self.y)
+        if self.y.dtype == 'object':
+            encoder = LabelEncoder()
+            self.y = encoder.fit_transform(self.y)
+        else:
+            print("Target variable is not categorical, no encoding needed.")
 
     def visualize_numerical(self):
         # Univariate analysis for numerical columns
@@ -81,19 +88,24 @@ class SimpleAutoML:
                     plt.title(f'Bivariate Analysis for {column1} vs {column2}')
                     plt.show()
 
+
     def handle_missing_values(self):
-        # Measure the percentage of missing values for each column
-        missing_percentage = self.data.isnull().mean() * 100
+        # Check if there are any missing values in the data
+        if self.data.isnull().values.any():
+            # Measure the percentage of missing values for each column
+            missing_percentage = self.data.isnull().mean() * 100
 
-        # Separate numerical and categorical columns
-        numerical_columns = self.X.select_dtypes(include=[np.number]).columns
-        categorical_columns = self.X.select_dtypes(exclude=[np.number]).columns
+            # Separate numerical and categorical columns
+            numerical_columns = self.X.select_dtypes(include=[np.number]).columns
+            categorical_columns = self.X.select_dtypes(exclude=[np.number]).columns
 
-        # Handle missing values in numerical columns (fill with mean)
-        self.X[numerical_columns] = self.X[numerical_columns].fillna(self.X[numerical_columns].mean())
+            # Handle missing values in numerical columns (fill with mean)
+            self.X[numerical_columns] = self.X[numerical_columns].fillna(self.X[numerical_columns].mean())
 
-        # Handle missing values in categorical columns (fill with mode)
-        self.X[categorical_columns] = self.X[categorical_columns].fillna(self.X[categorical_columns].mode().iloc[0])
+            # Handle missing values in categorical columns (fill with mode)
+            self.X[categorical_columns] = self.X[categorical_columns].fillna(self.X[categorical_columns].mode().iloc[0])
+        else:
+            print("No missing values found in the data.")
 
     def split_data(self, test_size=0.2, random_state=42):
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -156,7 +168,7 @@ class SimpleAutoML:
 
 if __name__ == "__main__":
     # Load your data
-    data = pd.read_csv('pima.csv', header=None)
+    data = pd.read_csv('data/pima.csv', header=None)
     data.columns = ['pregnancies', 'glucose', 'bp', 'skin_thickness', 'insulin', 'bmi', 'pedigree', 'age', 'label']
 
     # Initialize the AutoML package
